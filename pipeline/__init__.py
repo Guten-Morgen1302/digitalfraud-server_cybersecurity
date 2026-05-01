@@ -1,0 +1,1 @@
+"""Core SecureVista processing pipeline."""

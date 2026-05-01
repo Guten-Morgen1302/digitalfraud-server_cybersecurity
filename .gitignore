@@ -1,0 +1,13 @@
+__pycache__/
+*.py[cod]
+.env
+securevista.db
+frontend/node_modules/
+frontend/dist/
+.venv/
+data/
+runs/
+logs/
+codex/*.pt
+fraud_sentinel/models/
+fraud_sentinel/rag/chroma_store/
