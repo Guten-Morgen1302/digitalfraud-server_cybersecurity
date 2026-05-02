@@ -1,36 +1,38 @@
-# Optional heavy ML stack for SecureVista Pro v4 model training/inference.
-# Keep requirements.txt lightweight so the API demo can boot quickly.
+# ShieldGuard ML Stack — Heavy dependencies
+# Install: pip install -r requirements-ml.txt
 transformers>=4.44.0
 torch>=2.4.0
 torchaudio>=2.4.0
 sentence-transformers>=3.0.0
-xgboost>=2.1.0
 scikit-learn>=1.5.0
-chromadb>=0.5.0
-ultralytics>=8.3.0
-opencv-python>=4.10.0
-mediapipe>=0.10.14
-web3>=7.0.0
-celery>=5.4.0
-redis>=5.0.0
-twilio>=9.2.0
-openai-whisper>=20240930
-slowapi>=0.1.9
-asyncpg>=0.29.0
-databases>=0.9.0
-sqlalchemy>=2.0.0
-alembic>=1.13.0
-tldextract>=5.1.0
-python-whois>=0.9.4
-pyzbar>=0.1.9
-onnxruntime>=1.18.0
-huggingface_hub>=0.24.0
 datasets>=2.20.0
 accelerate>=0.33.0
 evaluate>=0.4.2
-roboflow>=1.1.40
-kaggle>=1.6.17
+huggingface_hub>=0.24.0
+onnxruntime>=1.18.0
+# Audio
 librosa>=0.10.2
 soundfile>=0.12.1
-prometheus-client>=0.20.0
+scipy>=1.13.0
+# Image
+pillow>=10.4.0
+# Dataset download
+kaggle>=1.6.17
+# URL analysis
+python-whois>=0.9.4
+# PDF
+reportlab>=4.2.0
+# Rate limiting
+slowapi>=0.1.9
+# Monitoring
 loguru>=0.7.2
+
+# UPI Threat Detection
+opencv-python-headless>=4.10.0
+xgboost>=2.1.0
+pyzbar>=0.1.9
+ultralytics>=8.2.0
+python-multipart>=0.0.9
+
+# Vishing / ShieldCall Live
+openai-whisper>=20231117

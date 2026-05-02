@@ -1,6 +1,5 @@
 __pycache__/
 *.py[cod]
-.env
 securevista.db
 frontend/node_modules/
 frontend/dist/

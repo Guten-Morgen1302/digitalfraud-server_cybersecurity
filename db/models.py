@@ -7,6 +7,56 @@ DB_PATH = Path("securevista.db")
 
 
 SCHEMA = """
+CREATE TABLE IF NOT EXISTS sms_scans (
+    id TEXT PRIMARY KEY,
+    timestamp TEXT NOT NULL,
+    raw_text TEXT NOT NULL,
+    risk_score REAL NOT NULL,
+    risk_label TEXT NOT NULL,
+    fraud_type TEXT,
+    verdict TEXT NOT NULL,
+    signals_found TEXT,
+    sender_id TEXT,
+    action TEXT DEFAULT 'NONE',
+    evidence_id TEXT
+);
+
+CREATE TABLE IF NOT EXISTS call_sessions (
+    id TEXT PRIMARY KEY,
+    started_at TEXT NOT NULL,
+    ended_at TEXT,
+    duration_sec INTEGER DEFAULT 0,
+    peak_risk_score REAL DEFAULT 0,
+    otp_count INTEGER DEFAULT 0,
+    verdict TEXT DEFAULT 'SAFE',
+    auto_cut INTEGER DEFAULT 0,
+    transcript_excerpt TEXT,
+    evidence_id TEXT
+);
+
+CREATE TABLE IF NOT EXISTS evidence_records (
+    id TEXT PRIMARY KEY,
+    created_at TEXT NOT NULL,
+    evidence_type TEXT NOT NULL,
+    source TEXT NOT NULL,
+    risk_score REAL NOT NULL,
+    verdict TEXT NOT NULL,
+    raw_text TEXT,
+    sha256_hash TEXT NOT NULL,
+    pdf_path TEXT,
+    incident_id TEXT REFERENCES incidents(id)
+);
+
+CREATE TABLE IF NOT EXISTS trusted_contacts (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    phone TEXT,
+    upi_id TEXT,
+    email TEXT,
+    added_at TEXT NOT NULL,
+    notes TEXT
+);
+
 CREATE TABLE IF NOT EXISTS incidents (
     id TEXT PRIMARY KEY,
     timestamp TEXT NOT NULL,

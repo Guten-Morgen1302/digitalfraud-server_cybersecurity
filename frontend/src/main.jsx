@@ -1,181 +1,130 @@
-import React, { startTransition, useEffect, useMemo, useState } from "react";
+import React, { useState, useEffect } from "react";
 import { createRoot } from "react-dom/client";
-import { AlertTriangle, Activity, ShieldCheck, Radio, Zap } from "lucide-react";
-import FraudAnalyserPanel from "./components/FraudAnalyserPanel";
+import {
+  ShieldCheck, LayoutDashboard, Phone, MessageSquare,
+  FileText, Settings, Link2, CreditCard, Activity, Mail
+} from "lucide-react";
 import "./styles.css";
 
-// Always use relative URLs → goes through Vite proxy → no CORS issues
-const API = "";
+// Pages
+import DashboardPage from "./pages/Dashboard";
+import PhishingChecker from "./pages/PhishingChecker";
+import DeepfakeUploader from "./pages/DeepfakeUploader";
+import SMSChecker from "./pages/SMSChecker";
+import QRScanner from "./pages/QRScanner";
+import URLScanner from "./pages/URLScanner";
+import LiveCallMonitor from "./pages/LiveCallMonitor";
+import SessionHistory from "./pages/SessionHistory";
+import SettingsPage from "./pages/Settings";
 
-function tierClass(tier) {
-  return String(tier || "LOW").toLowerCase();
-}
+const API = "http://localhost:8001";
+
+const NAV_ITEMS = [
+  { id: "dashboard",  label: "Unified Dashboard", icon: LayoutDashboard },
+  { id: "phishing",   label: "Phishing Checker",  icon: Mail },
+  { id: "deepfake",   label: "Deepfake Vision",   icon: ShieldCheck },
+  { id: "sms",        label: "SMS Fraud Scan",    icon: MessageSquare },
+  { id: "url",        label: "URL Link Scanner",  icon: Link2 },
+  { id: "qr",         label: "QR & UPI Shield",   icon: CreditCard },
+  { id: "calls",      label: "ShieldCall Live",   icon: Phone },
+  { id: "history",    label: "Session History",   icon: FileText },
+  { id: "settings",   label: "Settings",          icon: Settings },
+];
 
 function App() {
-  const [stats, setStats] = useState(null);
-  const [incidents, setIncidents] = useState([]);
-  const [alerts, setAlerts] = useState([]);
-  const [status, setStatus] = useState("connecting");
-
-  async function refresh() {
-    const [statsRes, incidentsRes] = await Promise.all([
-      fetch(`${API}/api/v1/dashboard/stats`),
-      fetch(`${API}/api/v1/incidents?limit=20`),
-    ]);
-    const nextStats = await statsRes.json();
-    const nextIncidents = await incidentsRes.json();
-    startTransition(() => {
-      setStats(nextStats);
-      setIncidents(nextIncidents);
-    });
-  }
-
-  async function runQrSwapDemo() {
-    await fetch(`${API}/api/v1/analyze/physical`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        zone_id: "MERCHANT_ZONE_01",
-        event_type: "QR_CODE_SWAP",
-        confidence: 0.96,
-        subject_id: "camera-counter-01",
-      }),
-    });
-    await fetch(`${API}/api/v1/analyze/upi`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        payer_vpa: "customer@upi",
-        payee_vpa: "unknown@ybl",
-        amount_inr: 15000,
-        txn_type: "QR",
-        is_new_payee: true,
-        qr_hash_mismatch: true,
-        beneficiary_name_mismatch: true,
-        zone_id: "MERCHANT_ZONE_01",
-      }),
-    });
-    await refresh();
-  }
-
-  async function runDigitalArrestDemo() {
-    await fetch(`${API}/api/v1/analyze/digital`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        channel: "SMS",
-        sender_id: "+919999999999",
-        raw_text:
-          "CBI digital arrest notice. Your account is blocked. Verify now and pay penalty using UPI. Share OTP urgently.",
-        zone_id: "MERCHANT_ZONE_01",
-      }),
-    });
-    await refresh();
-  }
+  const [activeTab, setActiveTab] = useState("dashboard");
+  const [backendLive, setBackendLive] = useState(false);
 
   useEffect(() => {
-    refresh();
-    const wsBase = API || `${window.location.protocol === "https:" ? "wss" : "ws"}://${window.location.host}`;
-    const wsUrl = wsBase.replace(/^http/, "ws") + "/ws/live";
-    const ws = new WebSocket(wsUrl);
-    ws.onopen = () => setStatus("live");
-    ws.onmessage = (event) => {
-      const payload = JSON.parse(event.data);
-      if (payload.type === "INCIDENT") {
-        startTransition(() => {
-          setAlerts((items) => [payload, ...items].slice(0, 8));
-        });
-        refresh();
-      }
+    const check = () => {
+      fetch(`${API}/health`)
+        .then((r) => { if (r.ok) setBackendLive(true); })
+        .catch(() => setBackendLive(false));
     };
-    ws.onerror = () => setStatus("offline");
-    ws.onclose = () => setStatus("offline");
-    return () => ws.close();
+    check();
+    const interval = setInterval(check, 10000);
+    return () => clearInterval(interval);
   }, []);
 
-  const tierData = useMemo(() => stats?.by_tier || {}, [stats]);
+  const renderPage = () => {
+    switch (activeTab) {
+      case "dashboard": return <DashboardPage api={API} />;
+      case "phishing":  return <PhishingChecker api={API} />;
+      case "deepfake":  return <DeepfakeUploader api={API} />;
+      case "sms":       return <SMSChecker       api={API} />;
+      case "url":       return <URLScanner       api={API} />;
+      case "qr":        return <QRScanner        api={API} />;
+      case "calls":     return <LiveCallMonitor   api={API} />;
+      case "history":   return <SessionHistory   api={API} />;
+      case "settings":  return <SettingsPage     api={API} />;
+      default:          return <DashboardPage    api={API} />;
+    }
+  };
 
   return (
-    <main className="shell">
-      <header className="topbar">
-        <div>
-          <h1>SecureVista Pro</h1>
-          <p>NOVA x SENTINEL cyber-physical fraud intelligence</p>
+    <div className="app-layout">
+      {/* ── Sidebar ─────────────────────────────────────────── */}
+      <aside className="sidebar">
+        <div className="sidebar-header">
+          <ShieldCheck size={28} color="#10b981" />
+          <h1>ShieldGuard Live</h1>
         </div>
-        <div className={`status ${status}`}>
-          <Radio size={18} />
-          <span>{status}</span>
-        </div>
-      </header>
 
-      <section className="metrics">
-        <div className="metric">
-          <ShieldCheck size={22} />
-          <span>Total Incidents</span>
-          <strong>{stats?.total_incidents ?? 0}</strong>
-        </div>
-        <div className="metric">
-          <Activity size={22} />
-          <span>Open Cases</span>
-          <strong>{stats?.open_incidents ?? 0}</strong>
-        </div>
-        <div className="metric critical">
-          <AlertTriangle size={22} />
-          <span>Critical</span>
-          <strong>{tierData.CRITICAL ?? 0}</strong>
-        </div>
-        <div className="metric high">
-          <Zap size={22} />
-          <span>High</span>
-          <strong>{tierData.HIGH ?? 0}</strong>
-        </div>
-      </section>
-
-      <section className="actions">
-        <button onClick={runQrSwapDemo}>Run QR Swap Demo</button>
-        <button onClick={runDigitalArrestDemo}>Run Digital Arrest Demo</button>
-        <button onClick={refresh}>Refresh</button>
-      </section>
-
-      <FraudAnalyserPanel apiBase={API} onActivity={refresh} />
-
-      <section className="grid">
-        <div className="panel">
-          <h2>Live Alerts</h2>
-          {alerts.length === 0 ? <p className="muted">Waiting for alerts.</p> : null}
-          {alerts.map((alert) => (
-            <article className={`incident ${tierClass(alert.risk_tier)}`} key={alert.id}>
-              <strong>{alert.risk_tier}</strong>
-              <span>{alert.incident_type}</span>
-              <small>{alert.id}</small>
-            </article>
+        <nav className="nav-links">
+          {NAV_ITEMS.map(({ id, label, icon: Icon }) => (
+            <button
+              key={id}
+              className={`nav-item ${activeTab === id ? "active" : ""}`}
+              onClick={() => setActiveTab(id)}
+            >
+              <Icon size={18} />
+              {label}
+              {/* Live badge for ShieldCall */}
+              {id === "calls" && (
+                <span style={{
+                  marginLeft: "auto",
+                  fontSize: 9,
+                  background: "rgba(239,68,68,0.15)",
+                  color: "var(--critical)",
+                  padding: "2px 6px",
+                  borderRadius: 99,
+                  fontWeight: 800,
+                  letterSpacing: "0.06em",
+                  border: "1px solid rgba(239,68,68,0.3)",
+                }}>LIVE</span>
+              )}
+            </button>
           ))}
-        </div>
+        </nav>
 
-        <div className="panel wide">
-          <h2>Incident Timeline</h2>
-          <div className="table">
-            <div className="row head">
-              <span>Tier</span>
-              <span>Type</span>
-              <span>Score</span>
-              <span>Zone</span>
-              <span>Hash</span>
-            </div>
-            {incidents.map((incident) => (
-              <div className="row" key={incident.id}>
-                <span className={`pill ${tierClass(incident.risk_tier)}`}>{incident.risk_tier}</span>
-                <span>{incident.incident_type}</span>
-                <span>{Number(incident.risk_score).toFixed(2)}</span>
-                <span>{incident.zone_id || "n/a"}</span>
-                <span className="hash">{incident.sha256_hash}</span>
-              </div>
-            ))}
-          </div>
+        {/* Backend status footer */}
+        <div style={{
+          padding: "16px",
+          borderTop: "1px solid var(--border)",
+          display: "flex",
+          alignItems: "center",
+          gap: 8,
+          fontSize: 12,
+          color: "var(--text-muted)",
+        }}>
+          <div style={{
+            width: 8, height: 8, borderRadius: "50%",
+            background: backendLive ? "#10b981" : "#ef4444",
+            boxShadow: backendLive ? "0 0 6px #10b981" : "none",
+          }} />
+          Backend: {backendLive ? "Connected" : "Offline"}
+          <Activity size={12} style={{ marginLeft: "auto", opacity: 0.4 }} />
         </div>
-      </section>
-    </main>
+      </aside>
+
+      {/* ── Main Content ─────────────────────────────────────── */}
+      <main className="main-content">
+        {renderPage()}
+      </main>
+    </div>
   );
 }
 
-createRoot(document.getElementById("root")).render(<App />);
+const container = document.getElementById("root");
+const root = createRoot(container);
+root.render(<App />);

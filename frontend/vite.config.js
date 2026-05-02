@@ -8,16 +8,19 @@ export default defineConfig({
     proxy: {
       // REST API — proxied to FastAPI
       '/api': {
-        target: 'http://127.0.0.1:8000',
+        target: 'http://127.0.0.1:8001',
         changeOrigin: true,
         secure: false,
+        // Also handle WebSocket upgrades on /api (e.g. /api/v1/call/ws)
+        ws: true,
       },
-      // WebSocket live alerts — proxied to FastAPI
+      // Legacy WebSocket live alerts path
       '/ws': {
-        target: 'ws://127.0.0.1:8000',
+        target: 'ws://127.0.0.1:8001',
         changeOrigin: true,
         ws: true,
       }
     }
   }
 })
+

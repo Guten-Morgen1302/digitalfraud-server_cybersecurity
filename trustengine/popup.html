@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TrustEngine — ShieldGuard</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    width: 340px; min-height: 420px;
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    background: linear-gradient(135deg, #0a0f1e 0%, #0d1a2e 100%);
+    color: #e0eaf8;
+  }
+  .header {
+    background: linear-gradient(135deg, #1a2a4a, #0f2040);
+    padding: 16px 18px;
+    display: flex; align-items: center; gap: 12px;
+    border-bottom: 1px solid rgba(100,160,255,0.15);
+  }
+  .shield-icon { font-size: 28px; }
+  .header-text h1 { font-size: 15px; color: #60a5fa; font-weight: 700; }
+  .header-text p { font-size: 11px; color: #94a3b8; margin-top: 2px; }
+  .status-dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    margin-left: auto; flex-shrink: 0;
+  }
+  .status-dot.live { background: #22c55e; box-shadow: 0 0 6px #22c55e; }
+  .status-dot.offline { background: #ef4444; }
+
+  .scan-box { padding: 14px 16px; }
+  .scan-label { font-size: 11px; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 8px; }
+  textarea {
+    width: 100%; height: 80px; resize: none;
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(100,160,255,0.2);
+    border-radius: 8px; color: #e0eaf8;
+    font: 13px/1.5 inherit; padding: 10px;
+  }
+  textarea:focus { outline: none; border-color: #60a5fa; }
+  .scan-btn {
+    width: 100%; margin-top: 10px;
+    background: linear-gradient(135deg, #2563eb, #1d4ed8);
+    color: white; border: none; border-radius: 8px;
+    padding: 11px; font-size: 13px; font-weight: 700;
+    cursor: pointer; transition: opacity .2s;
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+  }
+  .scan-btn:hover { opacity: 0.9; }
+  .scan-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  .result-box {
+    margin: 0 16px 14px; border-radius: 10px; padding: 14px;
+    display: none; animation: fadeIn .3s ease;
+  }
+  .result-box.safe { background: rgba(34,197,94,0.12); border: 1px solid rgba(34,197,94,0.3); }
+  .result-box.suspicious { background: rgba(234,179,8,0.12); border: 1px solid rgba(234,179,8,0.3); }
+  .result-box.scam { background: rgba(239,68,68,0.12); border: 1px solid rgba(239,68,68,0.3); }
+
+  .verdict-row { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+  .verdict-icon { font-size: 22px; }
+  .verdict-text { font-size: 15px; font-weight: 700; }
+  .verdict-text.safe { color: #22c55e; }
+  .verdict-text.suspicious { color: #eab308; }
+  .verdict-text.scam { color: #ef4444; }
+  .score-bar { height: 6px; border-radius: 999px; background: rgba(255,255,255,0.1); margin: 8px 0; }
+  .score-fill { height: 100%; border-radius: 999px; transition: width .5s ease; }
+  .score-fill.safe { background: #22c55e; }
+  .score-fill.suspicious { background: #eab308; }
+  .score-fill.scam { background: #ef4444; }
+  .detail-text { font-size: 12px; color: #94a3b8; line-height: 1.5; }
+  .advice-text { font-size: 12px; color: #fbbf24; margin-top: 8px; line-height: 1.5; }
+
+  .quick-actions { padding: 0 16px 14px; display: flex; gap: 8px; }
+  .quick-btn {
+    flex: 1; padding: 8px; border-radius: 7px; font-size: 11px; font-weight: 700;
+    cursor: pointer; border: 1px solid rgba(100,160,255,0.2);
+    background: rgba(255,255,255,0.04); color: #94a3b8; transition: all .2s;
+  }
+  .quick-btn:hover { background: rgba(255,255,255,0.08); color: #e0eaf8; }
+
+  .footer {
+    border-top: 1px solid rgba(100,160,255,0.1);
+    padding: 10px 16px;
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  .footer span { font-size: 10px; color: #475569; }
+  .open-dash {
+    font-size: 11px; color: #60a5fa; cursor: pointer; text-decoration: underline;
+  }
+
+  @keyframes fadeIn { from { opacity:0; transform:translateY(6px); } to { opacity:1; transform:translateY(0); } }
+</style>
+</head>
+<body>
+<div class="header">
+  <div class="shield-icon">🛡️</div>
+  <div class="header-text">
+    <h1>TrustEngine</h1>
+    <p>ShieldGuard AI Scam Defense</p>
+  </div>
+  <div class="status-dot offline" id="statusDot"></div>
+</div>
+
+<div class="scan-box">
+  <div class="scan-label">Scan Text / Message</div>
+  <textarea id="scanInput" placeholder="Paste suspicious message, email, or call transcript here..."></textarea>
+  <button class="scan-btn" id="scanBtn" onclick="runScan()">
+    <span>🔍</span> Analyze Now
+  </button>
+</div>
+
+<div class="result-box" id="resultBox">
+  <div class="verdict-row">
+    <span class="verdict-icon" id="verdictIcon"></span>
+    <span class="verdict-text" id="verdictText"></span>
+  </div>
+  <div class="score-bar"><div class="score-fill" id="scoreFill"></div></div>
+  <div class="detail-text" id="detailText"></div>
+  <div class="advice-text" id="adviceText"></div>
+</div>
+
+<div class="quick-actions">
+  <button class="quick-btn" onclick="scanPage('gmail')">📧 Scan Email</button>
+  <button class="quick-btn" onclick="scanPage('instagram')">📸 Scan DM</button>
+  <button class="quick-btn" onclick="openDashboard()">📊 Dashboard</button>
+</div>
+
+<div class="footer">
+  <span id="statusText">Checking backend...</span>
+  <span class="open-dash" onclick="openDashboard()">Open SecureVista →</span>
+</div>
+
+<script src="popup.js"></script>
+</body>
+</html>

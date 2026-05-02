@@ -1,0 +1,41 @@
+{
+  "manifest_version": 3,
+  "name": "TrustEngine — ShieldGuard",
+  "version": "3.0.0",
+  "description": "AI-powered scam detection for Gmail & Instagram. Powered by ShieldGuard.",
+  "permissions": ["activeTab", "storage", "scripting"],
+  "host_permissions": [
+    "https://mail.google.com/*",
+    "https://www.instagram.com/*",
+    "https://instagram.com/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "action": {
+    "default_popup": "popup.html",
+    "default_icon": {
+      "16": "icons/shield16.png",
+      "48": "icons/shield48.png",
+      "128": "icons/shield128.png"
+    },
+    "default_title": "TrustEngine — ShieldGuard"
+  },
+  "content_scripts": [
+    {
+      "matches": ["https://mail.google.com/*"],
+      "js": ["content_gmail.js"],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": ["https://www.instagram.com/*", "https://instagram.com/*"],
+      "js": ["content_instagram.js"],
+      "run_at": "document_idle"
+    }
+  ],
+  "icons": {
+    "16": "icons/shield16.png",
+    "48": "icons/shield48.png",
+    "128": "icons/shield128.png"
+  }
+}
