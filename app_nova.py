@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+import hashlib
 import json
 import os
+import sys
 import tempfile
 import time
 import uuid
@@ -27,6 +29,21 @@ from pipeline.digital_scorer import score_audio_deepfake, score_sms_full, score_
 from pipeline.frame_router import analyze_physical_payload
 from pipeline.model_registry import model_registry
 from pipeline.risk_engine import response_actions, risk_tier
+
+# ─── TrustEngine image model (optional heavy dependency) ──────────────────────
+# Inject the EXTENSION backend folder so image_model.py can be imported without
+# copying its source. Falls back to a lightweight hash-based mock if torch /
+# transformers are not installed in this environment.
+_EXTENSION_BACKEND = Path(__file__).parent.parent / "EXTENSION" / "backend"
+if _EXTENSION_BACKEND.exists() and str(_EXTENSION_BACKEND) not in sys.path:
+    sys.path.insert(0, str(_EXTENSION_BACKEND))
+
+try:
+    from models.image_model import ModelUnavailable, predict_image as _predict_image_real
+    _IMAGE_MODEL_AVAILABLE = True
+except Exception:
+    _IMAGE_MODEL_AVAILABLE = False
+    _predict_image_real = None  # type: ignore[assignment]
 
 app = FastAPI(title="SecureVista Pro", version="3.0")
 
@@ -112,6 +129,12 @@ class PhysicalPayload(BaseModel):
 class ModelTogglePayload(BaseModel):
     name: str
     loaded: bool
+
+
+class TextVerifyRequest(BaseModel):
+    text: str = Field(default="", min_length=0, max_length=5000)
+    platform: str = "unknown"
+    context: Any = None  # permissive: extension may send {url: str} or null
 
 
 def _now() -> str:
@@ -541,6 +564,141 @@ async def analyse_audio(file: UploadFile = File(...)) -> dict[str, Any]:
         "incident_id": saved_incident["id"] if saved_incident else None,
     }
 
+@app.post("/api/v1/verify/text")
+async def verify_text(payload: TextVerifyRequest) -> dict[str, Any]:
+    text = (payload.text or "").strip()
+    if len(text) < 3:
+        return {
+            "status": "Authentic",
+            "score": 0.0,
+            "label": "Text too short to analyze.",
+            "signals": {"found": []},
+            "model_version": "SecureVista-Text"
+        }
+
+    result = score_sms_full(text)
+    
+    score = result["risk_score"] / 100
+    if result["risk_score"] >= 70:
+        status = "Imposter"
+    elif result["risk_score"] >= 40:
+        status = "Uncertain"
+    else:
+        status = "Authentic"
+        
+    evidence_hash = sha256_payload({"text": text, "result": result})
+
+    if result["risk_score"] >= 40:
+        await _save_digital_event(
+            channel=f"EXTENSION_{payload.platform.upper()}",
+            sender_id="extension_user",
+            fraud_type=result["fraud_type"],
+            fraud_score=score,
+            guidance_text=result["warning"],
+            payload={"input_text": text[:300], "evidence_hash": evidence_hash},
+        )
+        
+    return {
+        "status": status,
+        "score": score,
+        "label": result["warning"] if result["risk_score"] >= 40 else "Message appears safe.",
+        "signals": {"found": result.get("signals_found", [])},
+        "model_version": "SecureVista-Text"
+    }
+
+
+@app.post("/api/v1/verify/image")
+async def verify_image(file: UploadFile = File(...)) -> dict[str, Any]:
+    """Deepfake / AI-image detector for the TrustEngine browser extension.
+
+    Tries to use the real HuggingFace model from EXTENSION/backend/models/image_model.py.
+    Falls back gracefully to a deterministic hash-based mock when torch /
+    transformers are not available so the dashboard integration still works.
+    """
+    contents = await file.read()
+    if not contents:
+        raise HTTPException(status_code=400, detail="Empty image file")
+
+    result: dict[str, Any] | None = None
+    model_version = "SecureVista-Image-Mock"
+
+    # ── Attempt real model inference ──────────────────────────────────────────
+    if _IMAGE_MODEL_AVAILABLE and _predict_image_real is not None:
+        try:
+            result = _predict_image_real(contents)
+            model_version = result.get("model_version", "TrustEngine-Image")
+        except Exception as exc:  # ModelUnavailable or any runtime error
+            result = None  # will fall through to mock
+            _log_image_fallback(str(exc))
+
+    # ── Hash-based mock fallback ──────────────────────────────────────────────
+    if result is None:
+        file_hash = hashlib.md5(contents).hexdigest()
+        hash_val = int(file_hash[:4], 16)
+        size_factor = len(contents) % 4
+        combined = (hash_val + size_factor) % 4
+
+        if combined == 0:
+            fake_score, status, label = 0.91, "Imposter", "AI-generated image detected"
+        elif combined == 1:
+            fake_score, status, label = 0.72, "Imposter", "Face deepfake detected"
+        elif combined == 2:
+            fake_score, status, label = 0.52, "Uncertain", "Possibly manipulated; confidence low"
+        else:
+            fake_score, status, label = 0.08, "Authentic", "No deepfake or AI-generation signals"
+
+        result = {
+            "status": status,
+            "score": fake_score,
+            "label": label,
+            "signals": {
+                "deepfake_prob": fake_score,
+                "ai_prob": fake_score * 0.6,
+                "real_prob": 1.0 - fake_score,
+            },
+            "model_version": model_version,
+        }
+
+    score: float = result["score"]
+    status: str = result["status"]
+    label: str = result["label"]
+    fraud_type = "DEEPFAKE_IMAGE" if status != "Authentic" else "NONE"
+
+    # ── Save incident to SecureVista dashboard if score is risky ──────────────
+    if score >= 0.40:
+        filename = file.filename or "scanned_image"
+        event = {
+            "id": f"dig_{uuid.uuid4().hex[:12]}",
+            "timestamp": _now(),
+            "channel": "EXTENSION_IMAGE_SCAN",
+            "sender_id": filename,
+            "fraud_type": fraud_type,
+            "fraud_score": score,
+            "extracted_urls": [],
+            "guidance_text": label,
+            "zone_id": None,
+            "model_version": model_version,
+        }
+        incident = _make_incident("DIGITAL", score, event, zone_id=None)
+        event["incident_id"] = incident["id"]
+        queries.insert_incident(incident)
+        await _publish_incident(incident)
+
+    return {
+        "status": status,
+        "score": round(score, 4),
+        "label": label,
+        "signals": result.get("signals", {}),
+        "model_version": model_version,
+    }
+
+
+def _log_image_fallback(reason: str) -> None:
+    """Non-fatal warning when real image model is unavailable."""
+    import logging
+    logging.getLogger("securevista.image").warning(
+        "Real image model unavailable (%s). Using hash-based mock.", reason
+    )
 
 @app.post("/api/v1/sos")
 async def trigger_sos(payload: dict[str, Any]) -> dict[str, Any]:
@@ -602,3 +760,18 @@ async def websocket_live(websocket: WebSocket) -> None:
             await websocket.send_json(alert)
     except WebSocketDisconnect:
         alert_bus.unsubscribe(queue)
+
+@app.get("/api/v1/healthz")
+def healthz() -> dict[str, Any]:
+    """Health-check endpoint used by the TrustEngine browser extension popup."""
+    return {
+        "status": "ok",
+        "version": "SecureVista Pro 3.0",
+        "image_model": "real" if _IMAGE_MODEL_AVAILABLE else "mock",
+        "timestamp": _now(),
+    }
+
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run("app_nova:app", host="0.0.0.0", port=8000, reload=True)

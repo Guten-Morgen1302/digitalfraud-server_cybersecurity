@@ -4,9 +4,8 @@ import { AlertTriangle, Activity, ShieldCheck, Radio, Zap } from "lucide-react";
 import FraudAnalyserPanel from "./components/FraudAnalyserPanel";
 import "./styles.css";
 
-const API =
-  import.meta.env.VITE_API_URL ||
-  (typeof window !== "undefined" && window.location.port === "8000" ? "" : "http://127.0.0.1:8000");
+// Always use relative URLs → goes through Vite proxy → no CORS issues
+const API = "";
 
 function tierClass(tier) {
   return String(tier || "LOW").toLowerCase();
@@ -76,7 +75,8 @@ function App() {
 
   useEffect(() => {
     refresh();
-    const wsUrl = API.replace("http", "ws") + "/ws/live";
+    const wsBase = API || `${window.location.protocol === "https:" ? "wss" : "ws"}://${window.location.host}`;
+    const wsUrl = wsBase.replace(/^http/, "ws") + "/ws/live";
     const ws = new WebSocket(wsUrl);
     ws.onopen = () => setStatus("live");
     ws.onmessage = (event) => {

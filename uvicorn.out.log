@@ -66,3 +66,11 @@ INFO:     127.0.0.1:56389 - "GET / HTTP/1.1" 200 OK
 INFO:     127.0.0.1:56430 - "GET /assets/index-Cg3Zt9oP.css HTTP/1.1" 200 OK
 INFO:     127.0.0.1:56430 - "GET / HTTP/1.1" 200 OK
 INFO:     127.0.0.1:56389 - "GET /assets/index-Cg3Zt9oP.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54313 - "GET /api/v1/incidents?limit=20 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50986 - "GET /api/v1/dashboard/stats HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50986 - "GET /api/v1/dashboard/stats HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54313 - "GET /api/v1/incidents?limit=20 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49202 - "GET /api/v1/dashboard/stats HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65167 - "GET /api/v1/incidents?limit=20 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63801 - "OPTIONS /api/v1/analyse/sms HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63801 - "POST /api/v1/analyse/sms HTTP/1.1" 404 Not Found

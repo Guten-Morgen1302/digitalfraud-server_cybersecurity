@@ -5,3 +5,12 @@ INFO:     Uvicorn running on http://127.0.0.1:8000 (Press CTRL+C to quit)
 INFO:     127.0.0.1:53389 - "WebSocket /ws/live" [accepted]
 INFO:     connection open
 INFO:     connection closed
+INFO:     127.0.0.1:59016 - "WebSocket /ws/live" [accepted]
+INFO:     connection open
+INFO:     connection closed
+INFO:     127.0.0.1:53754 - "WebSocket /ws/live" [accepted]
+INFO:     connection open
+INFO:     connection closed
+INFO:     127.0.0.1:49976 - "WebSocket /ws/live" [accepted]
+INFO:     connection open
+INFO:     connection closed

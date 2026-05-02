@@ -1,6 +1,8 @@
+import React from "react";
 import { LoaderCircle } from "lucide-react";
 import { useState } from "react";
 import ResultCard from "../common/ResultCard";
+import "./UPIChecker.css";
 
 const DEFAULT_FORM = {
   amount_inr: "",
@@ -18,11 +20,13 @@ const DEFAULT_FORM = {
 
 const SCENARIOS = [
   {
-    label: "Normal",
-    data: { amount_inr: "500", payee_vpa: "rahul.sharma@hdfcbank", txn_type: "SEND", amount_vs_avg_ratio: 0.8 },
+    label: "💚 Safe Payment",
+    emoji: "✅",
+    data: { amount_inr: "500", payee_vpa: "mom@hdfcbank", txn_type: "SEND", amount_vs_avg_ratio: 0.8 },
   },
   {
-    label: "Late Night",
+    label: "⚠️ Large Late Night",
+    emoji: "🌙",
     data: {
       amount_inr: "75000",
       payee_vpa: "unknown8877@ybl",
@@ -34,18 +38,21 @@ const SCENARIOS = [
     },
   },
   {
-    label: "SIM Swap",
+    label: "🚨 SIM Swap Attack",
+    emoji: "📱",
     data: {
-      amount_inr: "45000",
+      amount_inr: "180000",
       payee_vpa: "temp9999@upi",
       txn_type: "SEND",
       is_new_payee: true,
       sim_swap_recent: true,
       device_changed: true,
+      amount_vs_avg_ratio: 6.0,
     },
   },
   {
-    label: "Collect Request",
+    label: "🚨 Fake Collect",
+    emoji: "💸",
     data: {
       amount_inr: "15000",
       payee_vpa: "refund.portal@ybl",
@@ -55,13 +62,15 @@ const SCENARIOS = [
     },
   },
   {
-    label: "Screen Share",
+    label: "🚨 Screen Share OTP",
+    emoji: "👁️",
     data: {
-      amount_inr: "25000",
+      amount_inr: "100000",
       payee_vpa: "xyz.payments@ibl",
       txn_type: "SEND",
       screen_share_active: true,
       is_new_payee: true,
+      amount_vs_avg_ratio: 5.0,
     },
   },
 ];
@@ -110,18 +119,27 @@ export default function UPIChecker({ apiBase, onActivity }) {
   return (
     <div className="analyser-grid">
       <div className="composer-card">
-        <div className="sample-row">
-          {SCENARIOS.map((scenario) => (
-            <button key={scenario.label} type="button" className="chip-button" onClick={() => patchForm(scenario.data)}>
-              {scenario.label}
-            </button>
-          ))}
+        <div className="sample-container">
+          <label className="sample-label">⚡ Quick scenarios:</label>
+          <div className="sample-row">
+            {SCENARIOS.map((scenario) => (
+              <button 
+                key={scenario.label} 
+                type="button" 
+                className="chip-button sample-chip" 
+                onClick={() => patchForm(scenario.data)}
+              >
+                <span>{scenario.emoji}</span>
+                <span className="scenario-text">{scenario.label}</span>
+              </button>
+            ))}
+          </div>
         </div>
 
         <div className="field-grid">
-          <div>
+          <div className="field-item">
             <label className="field-label" htmlFor="upi-amount">
-              Amount
+              💰 Amount (₹)
             </label>
             <input
               id="upi-amount"
@@ -129,12 +147,12 @@ export default function UPIChecker({ apiBase, onActivity }) {
               value={form.amount_inr}
               onChange={(event) => patchForm({ amount_inr: event.target.value })}
               className="text-field"
-              placeholder="15000"
+              placeholder="Enter amount"
             />
           </div>
-          <div>
+          <div className="field-item">
             <label className="field-label" htmlFor="upi-vpa">
-              Payee UPI ID
+              👤 Payee UPI ID
             </label>
             <input
               id="upi-vpa"
@@ -144,9 +162,9 @@ export default function UPIChecker({ apiBase, onActivity }) {
               placeholder="name@ybl"
             />
           </div>
-          <div>
+          <div className="field-item">
             <label className="field-label" htmlFor="upi-type">
-              Transaction type
+              📤 Transaction Type
             </label>
             <select
               id="upi-type"
@@ -154,14 +172,14 @@ export default function UPIChecker({ apiBase, onActivity }) {
               onChange={(event) => patchForm({ txn_type: event.target.value })}
               className="select-field"
             >
-              <option value="SEND">SEND</option>
-              <option value="COLLECT">COLLECT</option>
-              <option value="QR">QR</option>
+              <option value="SEND">SEND (You Pay)</option>
+              <option value="COLLECT">COLLECT (Request)</option>
+              <option value="QR">QR Scan</option>
             </select>
           </div>
-          <div>
+          <div className="field-item">
             <label className="field-label" htmlFor="upi-hour">
-              Hour of day
+              🕐 Hour of Day
             </label>
             <input
               id="upi-hour"
@@ -171,11 +189,12 @@ export default function UPIChecker({ apiBase, onActivity }) {
               value={form.hour_of_day}
               onChange={(event) => patchForm({ hour_of_day: Number(event.target.value) })}
               className="text-field"
+              placeholder="-1 (current)"
             />
           </div>
           <div className="field-span">
             <label className="field-label" htmlFor="upi-ratio">
-              Amount versus normal average: {form.amount_vs_avg_ratio.toFixed(1)}x
+              📊 Amount vs Your Avg: <strong>{form.amount_vs_avg_ratio.toFixed(1)}x</strong>
             </label>
             <input
               id="upi-ratio"
@@ -187,33 +206,43 @@ export default function UPIChecker({ apiBase, onActivity }) {
               onChange={(event) => patchForm({ amount_vs_avg_ratio: Number(event.target.value) })}
               className="range-field"
             />
+            <div className="ratio-labels">
+              <span>0.1x</span>
+              <span>5x</span>
+              <span>10x</span>
+            </div>
           </div>
         </div>
 
-        <div className="toggle-grid">
-          {[
-            ["is_new_payee", "New payee"],
-            ["device_changed", "Device changed"],
-            ["sim_swap_recent", "SIM swap in 72h"],
-            ["location_changed", "Location changed"],
-            ["screen_share_active", "Screen share active"],
-          ].map(([field, label]) => (
-            <button
-              key={field}
-              type="button"
-              className={`toggle-chip ${form[field] ? "active" : ""}`}
-              onClick={() => patchForm({ [field]: !form[field] })}
-            >
-              <span className="toggle-box">{form[field] ? "Yes" : "No"}</span>
-              <span>{label}</span>
-            </button>
-          ))}
+        <div className="toggle-section">
+          <label className="toggle-label">🚩 Risk Factors:</label>
+          <div className="toggle-grid">
+            {[
+              ["is_new_payee", "🆕 New Payee"],
+              ["device_changed", "📱 New Device"],
+              ["sim_swap_recent", "🚨 SIM Swap (72h)"],
+              ["location_changed", "📍 New Location"],
+              ["screen_share_active", "👁️ Screen Share ON"],
+            ].map(([field, label]) => (
+              <button
+                key={field}
+                type="button"
+                className={`toggle-chip ${form[field] ? "active" : ""}`}
+                onClick={() => patchForm({ [field]: !form[field] })}
+              >
+                <span className={`toggle-indicator ${form[field] ? "on" : "off"}`}>
+                  {form[field] ? "✓" : "○"}
+                </span>
+                <span>{label}</span>
+              </button>
+            ))}
+          </div>
         </div>
 
         <div className="form-actions">
           <button type="button" className="primary-action" disabled={!form.amount_inr || !form.payee_vpa || loading} onClick={analyse}>
             {loading ? <LoaderCircle size={16} className="spin" /> : null}
-            <span>{loading ? "Checking" : "Check Transaction"}</span>
+            <span>{loading ? "Analysing..." : "🔍 Check Transaction Risk"}</span>
           </button>
         </div>
         {error ? <p className="error-text">{error}</p> : null}
@@ -222,7 +251,7 @@ export default function UPIChecker({ apiBase, onActivity }) {
       <ResultCard
         result={result}
         emptyTitle="Transaction risk will appear here."
-        emptyHint="Load a scenario or describe a payment to see the risk breakdown."
+        emptyHint="Load a scenario or fill in details to see a live risk breakdown with recommended actions."
       />
     </div>
   );

@@ -1,0 +1,72 @@
+/* SMSAnalyser Component */
+
+.sample-container {
+  margin-bottom: 16px;
+}
+
+.sample-label {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 8px;
+  color: rgba(200, 210, 200, 0.8);
+}
+
+.sample-row {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+}
+
+.sample-chip {
+  padding: 6px 12px;
+  font-size: 12px;
+  font-weight: 500;
+  background: rgba(100, 120, 110, 0.3);
+  border: 1px solid rgba(150, 170, 160, 0.4);
+  border-radius: 20px;
+  cursor: pointer;
+  color: rgb(200, 210, 200);
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.sample-chip:hover {
+  background: rgba(150, 170, 160, 0.4);
+  border-color: rgba(200, 210, 200, 0.6);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.sample-chip:active {
+  transform: translateY(0);
+}
+
+.text-input {
+  width: 100%;
+  padding: 12px;
+  border: 1px solid rgba(150, 170, 160, 0.3);
+  border-radius: 8px;
+  background: rgba(50, 70, 60, 0.3);
+  color: rgb(200, 210, 200);
+  font-family: inherit;
+  font-size: 14px;
+  line-height: 1.5;
+  resize: vertical;
+  transition: all 0.2s ease;
+  margin-bottom: 12px;
+}
+
+.text-input:focus {
+  outline: none;
+  border-color: rgba(138, 224, 168, 0.6);
+  background: rgba(50, 70, 60, 0.5);
+  box-shadow: 0 0 12px rgba(138, 224, 168, 0.2);
+}
+
+.text-input::placeholder {
+  color: rgba(150, 170, 160, 0.5);
+}

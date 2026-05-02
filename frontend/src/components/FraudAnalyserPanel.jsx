@@ -1,5 +1,6 @@
-import { AudioLines, IndianRupee, Link2, MessageSquareText, PhoneCall } from "lucide-react";
+import React from "react";
 import { useState } from "react";
+import { AudioLines, IndianRupee, Link2, MessageSquareText, PhoneCall } from "lucide-react";
 import AudioUploader from "./analysers/AudioUploader";
 import SMSAnalyser from "./analysers/SMSAnalyser";
 import TranscriptAnalyser from "./analysers/TranscriptAnalyser";
