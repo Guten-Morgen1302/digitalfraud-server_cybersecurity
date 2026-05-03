@@ -1,6 +1,4 @@
-# SecureVista Pro
 
-P0 hackathon implementation of the SecureVista Pro v3.0 PRD.
 
 ## What Works
 
